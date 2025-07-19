@@ -1,0 +1,14 @@
+name = "tagme-dating-profile"
+compatibility_date = "2024-07-19"
+pages_build_output_dir = ".vercel/output/static"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "tagme-profiles"
+database_id = "e8735210-0249-4551-ba9c-22824fbadace"
+
+# Environment variables
+[vars]
+NODE_ENV = "production"
