@@ -1,266 +1,286 @@
 "use client"
 
 import { useState } from "react"
+import { toPng } from "html-to-image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Download, ArrowLeft, User, MapPin, Briefcase, GraduationCap, Home, Heart, Camera, Loader2, ChevronLeft, MoreHorizontal, X, Share2, Sparkles, QrCode } from "lucide-react"
-import { generateProfile, generateCardImage, ProfileData } from "@/lib/api"
-import QRCode from "qrcode"
-import { useToast } from "@/hooks/use-toast"
-import { toPng } from 'html-to-image'
+import { Download, ArrowLeft, User, Instagram, QrCode, Share2, Heart, Sparkles, Camera, Loader2 } from "lucide-react"
+import { ProfileAvatar } from "@/components/profile-avatar"
 
-export default function DatingProfileGenerator() {
+interface ProfileData {
+  name: string
+  age: string
+  instagram: string
+  keywords: string[]
+  intro: string
+}
+
+export default function Component() {
   const [step, setStep] = useState<"input" | "output">("input")
   const [formData, setFormData] = useState({
     name: "",
     age: "",
     instagram: "",
-    mbti: "",
     keywords: "",
   })
   const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [profileId, setProfileId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [qrCodeData, setQrCodeData] = useState<string>("")
-  const { toast } = useToast()
+  const [isDownloading, setIsDownloading] = useState(false)
 
-  const handleCreateProfile = async () => {
-    if (!formData.name || !formData.age) {
-      toast({
-        title: "필수 정보 누락",
-        description: "이름과 나이는 필수 입력 항목입니다.",
-        variant: "destructive",
-      })
-      return
+  const generateIntro = (name: string, keywords: string[]): string => {
+    // Extract MBTI type from keywords if present
+    const mbtiTypes = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 
+                       'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
+    const mbtiKeyword = keywords.find(k => mbtiTypes.includes(k.replace('#', '').toUpperCase()))
+    const mbtiType = mbtiKeyword ? mbtiKeyword.replace('#', '').toUpperCase() : null
+    
+    // Extract other keywords for personalization
+    const otherKeywords = keywords.filter(k => !mbtiTypes.includes(k.replace('#', '').toUpperCase()))
+    
+    // MBTI-specific templates
+    const mbtiTemplates: { [key: string]: string[] } = {
+      'ENFP': [
+        `안녕하세요, ${name}입니다 ✨ ENFP 특유의 밝은 에너지로 주변을 환하게 만드는 걸 좋아해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}${otherKeywords.length > 1 ? `와 ${otherKeywords[1].replace('#', '')}` : ''}를 통해 새로운 영감을 얻고,` : '새로운 경험을 통해 영감을 얻고,'} 그 순간들을 특별하게 만들어가는 중이에요. 함께 있으면 자연스럽게 웃음이 나오는, 그런 따뜻한 관계를 만들어가고 싶어요 🌸`,
+        `${name}이에요 💫 호기심 많은 ENFP답게 매일이 새로운 모험이죠! ${otherKeywords.length > 0 ? `특히 ${otherKeywords[0].replace('#', '')}에 푹 빠져있고,` : '다양한 취미를 즐기며'} 열정적으로 살아가고 있어요. 깊이 있는 대화와 진정성 있는 연결을 중요하게 생각하며, 서로의 꿈을 응원하는 관계를 꿈꿔요 🌟`
+      ],
+      'INFP': [
+        `반가워요, ${name}입니다 🌙 INFP의 섬세한 감성으로 세상을 바라보며 살아가고 있어요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 좋아하고,` : '조용한 시간을 즐기며'} 마음 깊은 곳의 이야기들을 나눌 수 있는 사람을 찾고 있어요. 서로의 내면을 이해하고 공감하며, 함께 성장할 수 있는 특별한 인연을 기다려요 💝`,
+        `${name}이라고 해요 🌸 이상주의적인 INFP답게 진정성 있는 관계를 추구해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}${otherKeywords.length > 1 ? `이나 ${otherKeywords[1].replace('#', '')}` : ''}를 통해` : '일상 속에서'} 작은 의미들을 발견하고, 그 순간들을 소중히 여기죠. 따뜻한 마음으로 서로를 이해하고 지지해줄 수 있는 관계를 만들어가고 싶어요 ✨`
+      ],
+      'ENTP': [
+        `안녕하세요! ${name}입니다 🚀 ENTP 특유의 창의적 사고로 매일을 흥미롭게 만들어가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 대한 열정이 넘치고,` : '새로운 아이디어를 탐구하는 걸 좋아하고,'} 지적인 대화를 즐기는 편이에요. 함께 성장하고 서로에게 영감을 주는, 역동적인 관계를 추구해요 💡`,
+        `${name}이에요 ⚡ 호기심 많은 ENTP답게 끊임없이 새로운 것을 배우고 도전해요. ${otherKeywords.length > 0 ? `요즘은 ${otherKeywords[0].replace('#', '')}에 빠져있고,` : '다양한 분야에 관심이 많고,'} 열린 마음으로 세상을 탐험하죠. 서로의 관점을 존중하며 함께 토론하고 웃을 수 있는 파트너를 찾고 있어요 🌟`
+      ],
+      'INTJ': [
+        `${name}입니다 🎯 전략적인 INTJ답게 목표를 향해 꾸준히 나아가고 있어요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 자기계발을 하며,` : '지속적인 성장을 추구하며,'} 깊이 있는 관계를 중요하게 생각해요. 서로의 독립성을 존중하면서도 함께 발전할 수 있는 성숙한 관계를 원해요 💎`,
+        `안녕하세요, ${name}이에요 🌌 독립적인 INTJ지만 의미 있는 연결을 소중히 여겨요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 대한 전문성을 쌓아가며,` : '자신만의 분야를 개척하며,'} 삶의 질을 높이는 데 집중하고 있어요. 지적인 자극과 정서적 안정을 함께 나눌 수 있는 관계를 꿈꿔요 ✨`
+      ],
+      'ISFJ': [
+        `반가워요, ${name}입니다 🌷 따뜻한 ISFJ답게 주변 사람들을 챙기는 걸 좋아해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 즐기며` : '소소한 일상을 즐기며'} 안정적이고 편안한 삶을 추구하죠. 서로를 배려하고 신뢰할 수 있는, 오래도록 함께할 수 있는 관계를 만들어가고 싶어요 💕`,
+        `${name}이라고 해요 🏡 세심한 ISFJ의 마음으로 작은 것에도 감사하며 살아가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}${otherKeywords.length > 1 ? `과 ${otherKeywords[1].replace('#', '')}` : ''}를 좋아하고,` : '일상의 행복을 찾으며'} 진실된 마음으로 관계를 만들어가요. 서로의 일상을 따뜻하게 채워줄 수 있는 특별한 사람을 기다려요 🌸`
+      ],
+      'ESFP': [
+        `안녕! ${name}이에요 🎉 활발한 ESFP답게 매 순간을 즐겁게 살아가려고 노력해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 정말 좋아하고,` : '다양한 활동을 즐기고,'} 새로운 경험을 통해 삶을 풍요롭게 만들어가죠. 함께 웃고 즐길 수 있는, 긍정적인 에너지를 나눌 수 있는 사람을 찾고 있어요 🌈`,
+        `${name}입니다 ✨ 자유로운 ESFP의 영혼으로 순간순간을 소중히 여겨요. ${otherKeywords.length > 0 ? `특히 ${otherKeywords[0].replace('#', '')}할 때 가장 행복하고,` : '즐거운 시간을 보낼 때 가장 행복하고,'} 주변 사람들과 그 기쁨을 나누는 걸 좋아해요. 서로의 일상을 특별하게 만들어줄 수 있는 밝은 관계를 원해요 🎈`
+      ],
+      'INFJ': [
+        `${name}입니다 🌠 깊이 있는 INFJ답게 의미 있는 연결을 추구해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 내면의 평화를 찾고,` : '조용한 성찰을 통해 성장하며,'} 진정성 있는 관계를 소중히 여기죠. 서로의 영혼을 이해하고 함께 성장할 수 있는 깊은 관계를 꿈꿔요 💫`,
+        `안녕하세요, ${name}이에요 🌙 직관적인 INFJ의 시선으로 세상을 바라봐요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 관심이 많고,` : '다양한 것에 관심을 가지며'} 삶의 의미를 탐구하는 걸 좋아해요. 서로의 꿈과 가치관을 공유하며 함께 걸어갈 수 있는 특별한 인연을 기다려요 ✨`
+      ],
+      'ISTP': [
+        `${name}이에요 🔧 실용적인 ISTP답게 행동으로 보여주는 스타일이에요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 즐기며` : '다양한 활동을 즐기며'} 자유롭게 살아가고 있어요. 서로의 공간을 존중하면서도 함께할 때 편안한, 균형 잡힌 관계를 추구해요 🏔️`,
+        `반가워요, ${name}입니다 ⚙️ 독립적인 ISTP지만 진정한 연결은 소중히 여겨요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 열중하며` : '자신만의 취미를 즐기며'} 꾸준히 실력을 쌓아가고 있죠. 과하지 않은 관심과 편안한 동행이 가능한 관계를 만들어가고 싶어요 🌿`
+      ],
+      'ENFJ': [
+        `안녕하세요, ${name}입니다 🌟 따뜻한 ENFJ답게 사람들과의 연결을 소중히 여겨요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 다른 사람들과 교감하고,` : '진정한 소통을 추구하며'} 서로에게 긍정적인 영향을 주고받는 관계를 만들어가죠. 함께 성장하고 서로의 가능성을 이끌어낼 수 있는 특별한 인연을 기다려요 💕`,
+        `${name}이에요 🎭 공감능력이 뛰어난 ENFJ의 마음으로 세상을 따뜻하게 만들어가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 열정을 쏟으며,` : '의미 있는 일에 열정을 쏟으며,'} 주변 사람들에게 영감을 주려고 노력해요. 서로의 꿈을 응원하고 함께 더 나은 미래를 만들어갈 수 있는 관계를 꿈꿔요 ✨`
+      ],
+      'INTP': [
+        `${name}입니다 💭 분석적인 INTP답게 세상의 원리를 탐구하는 걸 좋아해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 대해 깊이 연구하며,` : '지적 호기심을 충족시키며'} 끊임없이 배우고 성장하고 있어요. 지적인 대화와 조용한 애정을 나눌 수 있는, 서로를 이해하는 관계를 원해요 🌌`,
+        `안녕하세요, ${name}이에요 🔭 호기심 많은 INTP의 시선으로 세상을 관찰해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 푹 빠져있고,` : '다양한 분야를 탐구하며'} 논리적으로 사고하는 걸 즐기죠. 서로의 생각을 존중하고 함께 지적 성장을 이룰 수 있는 편안한 관계를 만들어가고 싶어요 💫`
+      ],
+      'ENTJ': [
+        `${name}입니다 👑 리더십 있는 ENTJ답게 목표를 향해 전진하고 있어요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 실력을 쌓으며,` : '꾸준한 성장을 추구하며,'} 더 큰 비전을 실현하기 위해 노력하죠. 서로를 동기부여하고 함께 성공을 만들어갈 수 있는 파트너를 찾고 있어요 🚀`,
+        `안녕하세요, ${name}이에요 💼 야심찬 ENTJ의 열정으로 매일을 의미 있게 만들어가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 전문성을 갖추고,` : '자신만의 분야에서 성과를 내며,'} 계속해서 발전하고 있어요. 서로의 목표를 지지하고 함께 더 높은 곳을 향해 나아갈 수 있는 관계를 원해요 ⭐`
+      ],
+      'ISTJ': [
+        `반가워요, ${name}입니다 📚 신중한 ISTJ답게 안정적이고 의미 있는 삶을 추구해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 꾸준히 하며` : '일상의 루틴을 소중히 여기며'} 차근차근 목표를 달성해가고 있어요. 서로를 신뢰하고 의지할 수 있는, 오래도록 함께할 수 있는 진실한 관계를 만들어가고 싶어요 🌳`,
+        `${name}이라고 해요 🏛️ 책임감 강한 ISTJ의 마음으로 매사에 최선을 다해요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 진심을 다하고,` : '맡은 일에 최선을 다하며,'} 주변 사람들에게 믿음을 주려고 노력하죠. 서로의 가치관을 존중하고 안정적인 미래를 함께 만들어갈 수 있는 관계를 꿈꿔요 💎`
+      ],
+      'ESTJ': [
+        `${name}입니다 💪 실행력 있는 ESTJ답게 계획한 것을 착실히 이루어가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 성취감을 느끼며,` : '목표를 달성하며 성취감을 느끼고,'} 효율적인 삶을 추구하죠. 서로의 성장을 도우며 함께 발전할 수 있는 건강한 관계를 원해요 🎯`,
+        `안녕하세요, ${name}이에요 🏆 목표지향적인 ESTJ의 추진력으로 인생을 개척해가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 열중하며` : '다양한 활동에 참여하며'} 리더십을 발휘하고 있어요. 서로를 존중하고 함께 성장할 수 있는, 든든한 파트너십을 만들어가고 싶어요 ⚡`
+      ],
+      'ESFJ': [
+        `반가워요! ${name}입니다 💖 친화력 좋은 ESFJ답게 사람들과의 관계를 소중히 여겨요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 즐기며` : '함께하는 시간을 즐기며'} 따뜻한 추억을 만들어가고 있어요. 서로를 배려하고 챙겨주며, 일상의 행복을 함께 나눌 수 있는 관계를 꿈꿔요 🌺`,
+        `${name}이라고 해요 🤗 배려심 깊은 ESFJ의 마음으로 주변을 따뜻하게 만들어요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 즐거움을 나누고,` : '일상의 작은 것들에 감사하며'} 긍정적인 에너지를 전파하죠. 서로의 일상을 풍요롭게 만들어줄 수 있는 특별한 인연을 기다려요 ✨`
+      ],
+      'ISFP': [
+        `${name}이에요 🎨 감성적인 ISFP답게 나만의 속도로 삶을 즐기고 있어요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에서 영감을 받으며,` : '예술적인 감성을 추구하며,'} 진정한 나를 표현하려고 노력해요. 서로의 개성을 존중하고 편안하게 함께할 수 있는 자유로운 관계를 원해요 🌈`,
+        `안녕하세요, ${name}입니다 🌿 섬세한 ISFP의 감성으로 아름다움을 발견해가요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 사랑하고,` : '자연과 예술을 사랑하며,'} 순간순간의 감정을 소중히 여기죠. 서로의 내면을 이해하고 있는 그대로 받아들여주는 따뜻한 관계를 만들어가고 싶어요 💝`
+      ],
+      'ESTP': [
+        `${name}입니다 🏃 활동적인 ESTP답게 현재를 즐기며 살아가요! ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}로 스릴을 만끽하며,` : '다양한 경험을 추구하며,'} 매일을 흥미롭게 만들어가죠. 함께 모험을 즐기고 순간을 만끽할 수 있는 에너지 넘치는 관계를 원해요 ⚡`,
+        `안녕! ${name}이에요 🎯 실용적인 ESTP의 감각으로 인생을 즐겨요. ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 푹 빠져있고,` : '액티브한 활동을 좋아하고,'} 도전을 두려워하지 않죠. 서로에게 활력을 주고 함께 성장할 수 있는 다이나믹한 관계를 만들어가고 싶어요 🔥`
+      ]
+    }
+    
+    // General templates if no MBTI or MBTI not in our list
+    const generalTemplates = [
+      `안녕하세요, ${name}입니다 ✨ ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 사랑하고,` : '일상의 작은 행복을 찾으며'} 매일을 특별하게 만들어가려고 노력해요. ${otherKeywords.length > 1 ? `특히 ${otherKeywords[1].replace('#', '')}할 때 가장 나다운 모습이 되는 것 같아요.` : '진정한 나를 보여줄 수 있는 편안한 관계를 추구해요.'} 서로의 일상에 자연스럽게 스며들어 함께 성장할 수 있는 따뜻한 인연을 기다려요 🌸`,
+      `${name}이에요 🌟 ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 푹 빠져있고,` : '새로운 것을 배우는 걸 좋아하고,'} 작은 순간들도 의미 있게 만들어가는 중이에요. ${otherKeywords.length > 1 ? `${otherKeywords[1].replace('#', '')}도 제 삶의 중요한 부분이죠.` : '일상 속에서 행복을 찾아가고 있어요.'} 진솔한 대화와 따뜻한 마음을 나눌 수 있는, 서로에게 힘이 되는 관계를 만들어가고 싶어요 💝`,
+      `반가워요! ${name}입니다 💫 ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}를 통해 삶의 즐거움을 찾고,` : '일상에서 소소한 행복을 발견하며'} 긍정적인 에너지로 하루하루를 채워가요. ${otherKeywords.length > 1 ? `${otherKeywords[1].replace('#', '')}도 빼놓을 수 없는 취미예요.` : '새로운 경험도 즐기는 편이에요.'} 서로의 이야기에 귀 기울이고 함께 웃을 수 있는 편안한 관계를 꿈꿔요 🌈`,
+      `${name}이라고 해요 🌺 ${otherKeywords.length > 0 ? `${otherKeywords[0].replace('#', '')}에 관심이 많고,` : '다양한 것들에 호기심을 가지고'} 꾸준히 성장하려고 노력하는 중이에요. ${otherKeywords.length > 1 ? `${otherKeywords[1].replace('#', '')}를 하면서 스트레스를 풀기도 하죠.` : '일과 휴식의 균형을 중요하게 생각해요.'} 서로를 있는 그대로 인정하고 함께 더 나은 사람이 될 수 있는 관계를 원해요 ✨`
+    ]
+    
+    // Select appropriate template
+    if (mbtiType && mbtiTemplates[mbtiType]) {
+      const templates = mbtiTemplates[mbtiType]
+      return templates[Math.floor(Math.random() * templates.length)]
+    } else {
+      return generalTemplates[Math.floor(Math.random() * generalTemplates.length)]
+    }
+  }
+
+  const generateQRData = (profile: ProfileData): string => {
+    return `BEGIN:VCARD
+VERSION:3.0
+FN:${profile.name}
+NOTE:${profile.intro}
+URL:https://instagram.com/${profile.instagram.replace("@", "")}
+END:VCARD`
+  }
+
+  const handleCreateProfile = () => {
+    if (!formData.name || !formData.age) return
+
+    const keywordArray = formData.keywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k) => k.length > 0)
+      .map((k) => (k.startsWith("#") ? k : `#${k}`))
+
+    const profileData: ProfileData = {
+      name: formData.name,
+      age: formData.age,
+      instagram: formData.instagram,
+      keywords: keywordArray,
+      intro: generateIntro(formData.name, keywordArray),
     }
 
-    setIsLoading(true)
-    try {
-      const response = await generateProfile({
-        name: formData.name,
-        age: formData.age,
-        instagram: formData.instagram,
-        mbti: formData.mbti,
-        keywords: formData.keywords,
-      })
-
-      if (response.success && response.profile && response.profileId) {
-        setProfile(response.profile)
-        setProfileId(response.profileId)
-        
-        // Generate QR code
-        const profileUrl = `${window.location.origin}/profile/${response.profileId}`
-        const qrData = await QRCode.toDataURL(profileUrl, {
-          width: 256,
-          margin: 2,
-          color: {
-            dark: '#333333',
-            light: '#ffffff',
-          },
-        })
-        setQrCodeData(qrData)
-        
-        setStep("output")
-      } else {
-        toast({
-          title: "프로필 생성 실패",
-          description: response.error || "프로필을 생성하는 중 오류가 발생했습니다.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "오류 발생",
-        description: "서버와 통신 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    setProfile(profileData)
+    setStep("output")
   }
 
   const handleDownload = async () => {
-    if (!profile) return
-
-    setIsLoading(true)
-    try {
-      const cardElement = document.getElementById('profile-card')
-      if (!cardElement) {
-        throw new Error('Profile card element not found')
-      }
-
-      // Generate PNG from the card element
-      const dataUrl = await toPng(cardElement, {
-        quality: 0.95,
-        pixelRatio: 2, // 2x resolution for high quality
-      })
-
-      // Convert data URL to blob and download
-      const response = await fetch(dataUrl)
-      const blob = await response.blob()
-      
-      const url = URL.createObjectURL(blob)
-      const element = document.createElement("a")
-      element.href = url
-      element.download = `${profile.name}_dating_profile.png`
-      document.body.appendChild(element)
-      element.click()
-      document.body.removeChild(element)
-      URL.revokeObjectURL(url)
-      
-      toast({
-        title: "다운로드 완료",
-        description: "프로필 카드가 성공적으로 다운로드되었습니다.",
-      })
-    } catch (error) {
-      console.error('Download error:', error)
-      toast({
-        title: "다운로드 실패",
-        description: "이미지 생성 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleShare = async () => {
-    if (!profileId) return
-
-    const profileUrl = `${window.location.origin}/profile/${profileId}`
+    if (!profile || isDownloading) return
     
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${profile?.name}님의 프로필`,
-          text: '나의 소개팅 프로필을 확인해보세요!',
-          url: profileUrl,
-        })
-      } catch (error) {
-        // User cancelled or error occurred
+    const profileCard = document.getElementById("profile-card")
+    if (!profileCard) return
+
+    setIsDownloading(true)
+
+    try {
+      // Hide action buttons before capturing
+      const actionButtons = document.getElementById("action-buttons")
+      if (actionButtons) {
+        actionButtons.style.display = "none"
       }
-    } else {
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(profileUrl)
-      toast({
-        title: "링크 복사됨",
-        description: "프로필 링크가 클립보드에 복사되었습니다.",
+
+      // Generate PNG from the profile card
+      const dataUrl = await toPng(profileCard, {
+        quality: 0.95,
+        pixelRatio: 2, // Higher quality
+        backgroundColor: "#ffffff",
       })
+
+      // Show action buttons again
+      if (actionButtons) {
+        actionButtons.style.display = "flex"
+      }
+
+      // Download the image
+      const link = document.createElement("a")
+      link.download = `${profile.name}_dating_profile.png`
+      link.href = dataUrl
+      link.click()
+    } catch (error) {
+      console.error("Error generating image:", error)
+      // Show action buttons again in case of error
+      const actionButtons = document.getElementById("action-buttons")
+      if (actionButtons) {
+        actionButtons.style.display = "flex"
+      }
+    } finally {
+      setIsDownloading(false)
     }
   }
 
   if (step === "input") {
     return (
-      <div className="min-h-screen bg-[#F7F7F7] relative overflow-hidden">
-        {/* Bumble-style background */}
-        <div className="absolute inset-0 bg-[#F7F7F7]"></div>
-
-        <div className="container mx-auto px-4 py-8 max-w-md relative z-10">
-          {/* Bumble-style header */}
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-violet-50">
+        <div className="container mx-auto px-4 py-8 max-w-md">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-[#FFC629] rounded-3xl mb-4 shadow-lg">
-              <svg viewBox="0 0 24 24" className="w-12 h-12 text-white" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                <circle cx="12" cy="12" r="5"/>
-              </svg>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-pink-500 to-violet-600 rounded-2xl mb-4 shadow-lg">
+              <Heart className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              프로필 만들기
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-violet-600 bg-clip-text text-transparent mb-2">
+              Profile Creator
             </h1>
-            <p className="text-gray-600 text-base">
-              매력적인 프로필로 좋은 만남을 시작하세요
+            <p className="text-gray-600 text-sm leading-relaxed">
+              나만의 특별한 데이팅 프로필을
+              <br />
+              만들어보세요
             </p>
           </div>
 
-          <Card className="shadow-lg border-0 bg-white rounded-2xl">
-            <CardContent className="p-6 space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-semibold text-gray-700">
-                  이름 <span className="text-[#FFC629]">*</span>
+          <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-8 space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="name" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-pink-500" />
+                  이름 *
                 </Label>
                 <Input
                   id="name"
-                  placeholder="이름을 입력하세요"
+                  placeholder="김지수"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="h-12 border border-gray-300 focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/20 rounded-lg text-base transition-all duration-200 hover:border-gray-400"
+                  className="h-12 border-2 border-gray-100 focus:border-pink-300 focus:ring-pink-200 rounded-xl text-base font-medium"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="age" className="text-sm font-semibold text-gray-700">
-                  나이 <span className="text-[#FFC629]">*</span>
+              <div className="space-y-3">
+                <Label htmlFor="age" className="text-sm font-semibold text-gray-800">
+                  나이 *
                 </Label>
                 <Input
                   id="age"
-                  placeholder="나이를 입력하세요"
+                  placeholder="25"
                   type="number"
                   value={formData.age}
                   onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                  className="h-12 border border-gray-300 focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/20 rounded-lg text-base transition-all duration-200 hover:border-gray-400"
+                  className="h-12 border-2 border-gray-100 focus:border-pink-300 focus:ring-pink-200 rounded-xl text-base font-medium"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="job" className="text-sm font-semibold text-gray-700">
-                  직업
+              <div className="space-y-3">
+                <Label htmlFor="instagram" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Instagram className="w-4 h-4 text-pink-500" />
+                  인스타그램
                 </Label>
                 <Input
-                  id="job"
-                  placeholder="예: 디자이너, 개발자, 마케터"
+                  id="instagram"
+                  placeholder="@your_handle"
                   value={formData.instagram}
                   onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                  className="h-12 border border-gray-300 focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/20 rounded-lg text-base transition-all duration-200 hover:border-gray-400"
+                  className="h-12 border-2 border-gray-100 focus:border-pink-300 focus:ring-pink-200 rounded-xl text-base font-medium"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="mbti" className="text-sm font-semibold text-gray-700">
-                  MBTI
-                </Label>
-                <Input
-                  id="mbti"
-                  placeholder="예: ENFP, INTJ"
-                  value={formData.mbti}
-                  onChange={(e) => setFormData({ ...formData, mbti: e.target.value.toUpperCase() })}
-                  maxLength={4}
-                  className="h-12 border border-gray-300 focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/20 rounded-lg text-base transition-all duration-200 hover:border-gray-400 uppercase tracking-wider"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="keywords" className="text-sm font-semibold text-gray-700">
-                  관심사
+              <div className="space-y-3">
+                <Label htmlFor="keywords" className="text-sm font-semibold text-gray-800">
+                  관심사 키워드
                 </Label>
                 <Input
                   id="keywords"
-                  placeholder="예: 여행, 요리, 영화, 운동"
+                  placeholder="여행, 요리, 영화감상, 반려동물"
                   value={formData.keywords}
                   onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                  className="h-12 border border-gray-300 focus:border-[#FFC629] focus:ring-2 focus:ring-[#FFC629]/20 rounded-lg text-base transition-all duration-200 hover:border-gray-400"
+                  className="h-12 border-2 border-gray-100 focus:border-pink-300 focus:ring-pink-200 rounded-xl text-base font-medium"
                 />
-                <p className="text-xs text-gray-500">
-                  쉼표로 구분해서 입력해주세요
-                </p>
+                <p className="text-xs text-gray-500 font-medium">쉼표(,)로 구분해서 입력해주세요</p>
               </div>
 
               <Button
                 onClick={handleCreateProfile}
-                disabled={!formData.name || !formData.age || isLoading}
-                className="w-full h-14 bg-[#FFC629] hover:bg-[#F5B800] text-white font-semibold text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!formData.name || !formData.age}
+                className="w-full h-14 bg-gradient-to-r from-pink-500 to-violet-600 hover:from-pink-600 hover:to-violet-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    프로필 생성 중...
-                  </>
-                ) : (
-                  "프로필 만들기"
-                )}
+                프로필 생성하기
               </Button>
             </CardContent>
           </Card>
@@ -270,90 +290,114 @@ export default function DatingProfileGenerator() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F7]">
-      {/* Bumble-style container */}
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-violet-50">
       <div className="container mx-auto px-4 py-6 max-w-md">
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
             onClick={() => setStep("input")}
-            className="text-gray-700 hover:bg-gray-100 rounded-full p-2"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 hover:bg-white/60 rounded-xl px-4 py-2 font-medium"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ArrowLeft className="w-4 h-4" />
+            돌아가기
           </Button>
-          <span className="font-semibold text-lg text-gray-900">프로필</span>
-          <Button
-            variant="ghost"
-            onClick={handleShare}
-            className="text-gray-700 hover:bg-gray-100 rounded-full p-2"
-          >
-            <MoreHorizontal className="w-6 h-6" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-gray-800 hover:bg-white/60 rounded-xl"
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <Card
           id="profile-card"
-          className="shadow-lg border-0 overflow-hidden bg-white rounded-2xl"
+          className="shadow-2xl border-0 overflow-hidden bg-gradient-to-br from-white via-pink-50/30 to-violet-50/30 backdrop-blur-sm"
         >
           <CardContent className="p-0">
-            {/* Profile Image Placeholder */}
-            <div className="h-96 bg-gradient-to-b from-gray-100 to-gray-200 relative">
-              {/* User Avatar */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full bg-white/50 flex items-center justify-center">
-                  <User className="w-20 h-20 text-gray-400" />
-                </div>
-              </div>
-              
-              {/* Gradient overlay at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent" />
-              
-              {/* Name and Age overlay */}
-              <div className="absolute bottom-4 left-4 text-white">
-                <h2 className="text-3xl font-bold">{profile?.name}, {profile?.age}</h2>
+            {/* Header with gradient */}
+            <div className="h-32 bg-gradient-to-br from-pink-400 via-rose-400 to-violet-500 relative">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="absolute top-4 right-4">
+                <div className="w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
               </div>
             </div>
 
             {/* Profile Content */}
-            <div className="px-6 py-6">
-              {/* Basic Info */}
-              <div className="mb-4">
-                {profile?.instagram && (
-                  <div className="flex items-center gap-2 text-gray-700 mb-2">
-                    <Briefcase className="w-5 h-5" />
-                    <span className="text-base">{profile.instagram}</span>
-                  </div>
-                )}
-                {profile?.mbti && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <span className="text-sm font-bold">MBTI</span>
+            <div className="px-8 pb-8 -mt-16 relative z-10">
+              {/* Avatar - Perfectly Centered */}
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-300 via-rose-300 to-violet-400 p-1 shadow-2xl">
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      {profile ? (
+                        <ProfileAvatar
+                          name={profile.name}
+                          age={profile.age}
+                          mbti={profile.keywords.find(k => 
+                            ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 
+                             'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
+                            .includes(k.replace('#', '').toUpperCase())
+                          )?.replace('#', '')}
+                          keywords={profile.keywords}
+                          size={128}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-pink-100 to-violet-100 flex items-center justify-center">
+                          <User className="w-12 h-12 text-gray-600" />
+                        </div>
+                      )}
                     </div>
-                    <span className="text-base font-semibold">{profile.mbti}</span>
                   </div>
-                )}
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-400 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute -top-2 -left-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-md"
+                  >
+                    <Camera className="w-4 h-4 text-gray-600" />
+                  </Button>
+                </div>
               </div>
 
-              <Separator className="my-4" />
-
-              {/* About Me Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">나에 대해</h3>
-                <p className="text-gray-700 text-base leading-relaxed">{profile?.intro}</p>
+              {/* Name and Age */}
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">{profile?.name}</h2>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-xl text-gray-600 font-semibold">{profile?.age}세</span>
+                  {profile?.instagram && (
+                    <>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      <span className="text-lg text-violet-600 font-medium">{profile.instagram}</span>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Interest Tags */}
+              <Separator className="my-6 bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              {/* AI Generated Intro */}
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-pink-50 to-violet-50 rounded-2xl p-6 border border-pink-100">
+                  <p className="text-gray-700 text-base leading-relaxed font-medium text-center">{profile?.intro}</p>
+                </div>
+              </div>
+
+              {/* Hashtag Chips */}
               {profile?.keywords && profile.keywords.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">관심사</h3>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 text-center">관심사</h3>
+                  <div className="flex flex-wrap justify-center gap-2">
                     {profile.keywords.map((keyword, index) => (
                       <Badge
                         key={index}
                         variant="secondary"
-                        className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 text-sm font-medium rounded-full border-0 transition-colors"
+                        className="bg-gradient-to-r from-pink-100 to-violet-100 text-violet-700 hover:from-pink-200 hover:to-violet-200 px-4 py-2 text-sm font-semibold rounded-full border border-pink-200 shadow-sm hover:shadow-md transition-all duration-200"
                       >
                         {keyword}
                       </Badge>
@@ -362,61 +406,56 @@ export default function DatingProfileGenerator() {
                 </div>
               )}
 
-              {/* Looking for Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">이런 분을 찾아요</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-[#FFC629] text-white hover:bg-[#F5B800] px-4 py-2 text-sm font-medium rounded-full border-0">
-                    진솔한 대화
-                  </Badge>
-                  <Badge className="bg-[#FFC629] text-white hover:bg-[#F5B800] px-4 py-2 text-sm font-medium rounded-full border-0">
-                    함께 성장
-                  </Badge>
-                  <Badge className="bg-[#FFC629] text-white hover:bg-[#F5B800] px-4 py-2 text-sm font-medium rounded-full border-0">
-                    긍정적인 에너지
-                  </Badge>
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-
               {/* QR Code Section */}
-              <div className="mb-6">
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <h3 className="text-base font-semibold text-gray-900 mb-4 text-center">프로필 공유하기</h3>
-                  <div className="flex justify-center mb-4">
-                    {qrCodeData ? (
-                      <img src={qrCodeData} alt="Profile QR Code" className="w-32 h-32 rounded-lg" />
-                    ) : (
-                      <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-                      </div>
-                    )}
+              <div className="mb-8">
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                  <div className="flex items-center justify-center mb-4">
+                    <QrCode className="w-6 h-6 text-gray-600 mr-2" />
+                    <h3 className="text-lg font-bold text-gray-800">QR 코드</h3>
                   </div>
-                  <p className="text-sm text-gray-600 text-center">
-                    QR 코드로 프로필을 공유해보세요
+                  <div className="flex justify-center mb-4">
+                    <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                      <div className="grid grid-cols-8 gap-1 w-24 h-24">
+                        {Array.from({ length: 64 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-1 h-1 ${Math.random() > 0.5 ? "bg-gray-800" : "bg-white"} rounded-sm`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center font-medium">
+                    QR 코드를 스캔하여 프로필 정보를 확인하세요
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div id="action-buttons" className="flex gap-3">
                 <Button
                   onClick={handleDownload}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#FFC629] hover:bg-[#F5B800] text-white font-semibold py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                  disabled={isDownloading}
+                  className="flex-1 bg-gradient-to-r from-pink-500 to-violet-600 hover:from-pink-600 hover:to-violet-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
                 >
-                  {isLoading ? (
+                  {isDownloading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      처리 중...
+                      처리중...
                     </>
                   ) : (
                     <>
                       <Download className="w-5 h-5 mr-2" />
-                      프로필 저장하기
+                      다운로드
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={isDownloading}
+                  className="px-6 py-4 border-2 border-gray-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl font-semibold bg-transparent disabled:opacity-50"
+                >
+                  <Share2 className="w-5 h-5" />
                 </Button>
               </div>
             </div>

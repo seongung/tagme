@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { User, Instagram, Heart, Loader2 } from "lucide-react"
 import { getProfile, ProfileData } from '@/lib/api'
+import { ProfileAvatar } from "@/components/profile-avatar"
 
 export default function ProfilePage() {
   const params = useParams()
@@ -88,8 +89,19 @@ export default function ProfilePage() {
               <div className="flex justify-center mb-6">
                 <div className="relative">
                   <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-300 via-rose-300 to-violet-400 p-1 shadow-2xl">
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-pink-100 to-violet-100 flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-600" />
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      <ProfileAvatar
+                        name={profile.name}
+                        age={profile.age}
+                        mbti={profile.keywords.find(k => 
+                          ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 
+                           'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
+                          .includes(k.replace('#', '').toUpperCase())
+                        )?.replace('#', '')}
+                        keywords={profile.keywords}
+                        size={128}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   </div>
                 </div>
